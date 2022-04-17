@@ -1,0 +1,4 @@
+*ipynb
+checkpoints/*
+best_valid_model
+*.pyc
