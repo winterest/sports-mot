@@ -41,7 +41,6 @@ class NflImageStacks(Dataset):
         size=(512, 512),
         mode="train",  # train: random interval; test: consecutive // every possible interval
         down_size=1,
-        colortype="RGB",
     ):
         assert isinstance(nfl_dir, list), "nfl_dir should be a list of paths"
         self.dir = str(PurePath(nfl_dir[0].parent))
@@ -81,7 +80,6 @@ class NflImageStacks(Dataset):
             self.min_intv = 0
         self.size = size
         self.down_size = down_size
-        self.colortype = colortype
         assert mode in {
             "train",
             "validation",
@@ -123,29 +121,19 @@ class NflImageStacks(Dataset):
             )
             cur_frame_name = sorted(random.sample(pool, k=self.num_fram))
 
-        if self.colortype == "RGB":
-            resized_frames = [
-                Image.open(video + "/" + nm).convert("RGB").resize(self.size)
-                for nm in cur_frame_name
-            ]
-            processed_frames = [preprocess(frm) for frm in resized_frames]
-            return processed_frames
-        else:
-            resized_frames = [
-                Image.open(video + "/" + nm).convert("RGB").resize(self.size)
-                for nm in cur_frame_name
-            ]
-            processed_frames = [preprocess(frm) for frm in resized_frames]
+        resized_frames = [
+            Image.open(video + "/" + nm).convert("RGB").resize(self.size)
+            for nm in cur_frame_name
+        ]
+        processed_frames = [preprocess(frm) for frm in resized_frames]
 
-            resized_frames_l = [
-                Image.open(video + "/" + nm).convert("L").resize(self.size)
-                for nm in cur_frame_name
-            ]
-            processed_frames_l = [
-                preprocess_l(frm) for frm in resized_frames_l
-            ]
+        resized_frames_l = [
+            Image.open(video + "/" + nm).convert("L").resize(self.size)
+            for nm in cur_frame_name
+        ]
+        processed_frames_l = [preprocess_l(frm) for frm in resized_frames_l]
 
-            return processed_frames, processed_frames_l
+        return processed_frames, processed_frames_l
 
 
 class NflImagePairs(Dataset):
@@ -181,12 +169,6 @@ class NflImagePairs(Dataset):
         ]
 
         cur_frame_name = random.choice(pool)
-        """
-        try:
-            cur_frame_name = random.choice(pool)
-        except:
-            cur_frame_name = self.frames[video][ref_frame_idx]
-        """
 
         ref_frame = Image.open(
             self.dir + video + "/" + self.frames[video][ref_frame_idx]

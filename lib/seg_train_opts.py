@@ -12,19 +12,6 @@ class seg_train_opts(object):
         self.parser = argparse.ArgumentParser()
         # basic experiment setting
         self.parser.add_argument(
-            "--task", default="alignment", help="alignment|align_seg ",
-        )
-        self.parser.add_argument(
-            "--train_dataset", default="stacks", help="stacks | pairs",
-        )
-        self.parser.add_argument(
-            "--test_dataset",
-            default="",
-            help="coco | kitti | coco_hp | pascal",
-        )
-        self.parser.add_argument("--exp_id", default="default")
-        self.parser.add_argument("--test", action="store_true")
-        self.parser.add_argument(
             "--load_model", default="", help="path to pretrained model"
         )
         self.parser.add_argument(
@@ -85,9 +72,16 @@ class seg_train_opts(object):
             help="weight for addtional training task",
         )
         self.parser.add_argument(
-            "--add_task", default="reconstruct", help="rot10 | colorizing",
+            "--add_task",
+            default="reconstruct",
+            help="reconstruct | rot10 | colorizing | nextframe",
         )
-        
+
+        self.parser.add_argument(
+            "--loss_fn", default="BCELoss", help="MSELoss | BCELoss",
+        )
+        self.parser.add_argument("--debug_mode", action="store_true")
+        self.parser.add_argument("--smooth_label", action="store_true")
 
     def parse(self, args=""):
         if args == "":

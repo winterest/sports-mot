@@ -1,7 +1,7 @@
 import os
 
 import torch
-
+import torch.nn as nn
 
 # get the gpu id
 def get_most_idle_gpu():
@@ -35,3 +35,14 @@ def get_most_idle_gpu():
     )
     print("The best device is {}".format(device))
     return device
+
+
+smoothed = lambda s, l: [sum(s[i : i + l]) / l for i in range(0, len(s), l)]
+
+
+def union(x, y, union_fn="max"):
+    if union_fn == "max":
+        return torch.max(x, y)
+    elif union_fn == "relu":
+        relu = nn.ReLU()
+        return relu(x - y) + y
