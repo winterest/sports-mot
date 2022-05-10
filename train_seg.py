@@ -24,7 +24,7 @@ from _init_paths import init_paths
 
 init_paths()
 from aligning import ResSTN, pureSTN
-from utils import get_most_idle_gpu
+from utils import get_most_idle_gpu, rgb_to_l
 import matplotlib.pyplot as plt
 from segmentation import UNet, UNet_two_head
 from seg_train_opts import seg_train_opts
@@ -46,11 +46,14 @@ if __name__ == "__main__":
     BS = opt.bs
 
     print("Now Using device {}".format(device))
-    train_ds, valid_ds, test_ds = split_videos()
+    train_ds, valid_ds, test_ds = split_videos(
+        videos_path=opt.videos_path, patterns=opt.vid_patterns, soccernet=opt.soccernet
+    )
     TRAIN_NUM_FRAMES = opt.train_num_frames
     VALID_NUM_FRAMES = opt.valid_num_frames
     WEIGHT_ADD = opt.weight_add_task
     ADD_TASK = opt.add_task  # "rot10" | "colorizing" | "reconstruct"
+    ALIGN_MODEL_PATH = opt.align_model_path
 
     BS = 16
     LR = 0.00001
@@ -77,7 +80,7 @@ if __name__ == "__main__":
     elif opt.loss_fn == "BCELoss":
         seg_loss_fn = lambda segmm, seg_ref: F.binary_cross_entropy(
             seg_ref.view(-1), segmm.view(-1)
-        )        
+        )
         """
         seg_loss_fn = lambda segmm, seg_ref: F.binary_cross_entropy(
             torch.sigmoid(seg_ref).view(-1), segmm.view(-1)
@@ -94,9 +97,19 @@ if __name__ == "__main__":
     align_model = ResSTN(inc=align_inc, p=align_p)  # , only_alpha=only_alpha)
 
     align_model = align_model.to(device)
-    align_model.load_state_dict(
-        torch.load("./best_valid_model", map_location=lambda storage, loc: storage)
-    )
+    TO_LOAD = torch.load(ALIGN_MODEL_PATH, map_location=lambda storage, loc: storage)
+    """
+    if isinstance(TO_LOAD, dict):
+        align_model.load_state_dict(TO_LOAD["state_dict"])
+    else:
+        align_model.load_state_dict(TO_LOAD)
+    """
+    try:
+        align_model.load_state_dict(TO_LOAD)
+    except:
+        align_model.load_state_dict(TO_LOAD["state_dict"])
+
+
     print("alignment loaded")
     align_model.eval()
 
@@ -149,7 +162,7 @@ if __name__ == "__main__":
         seg_model.train()
         epoch_loss, cnt_sample = 0, 0
         train_loop = tqdm(enumerate(train_loader), total=len(train_loader), leave=True)
-        for batch_idx, (sample, sample_l) in train_loop:
+        for batch_idx, sample in train_loop:
 
             with torch.no_grad():
                 align_model.eval()
@@ -181,6 +194,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             if ADD_TASK == "colorizing":
+                sample_l = rgb_to_l(sample)
                 ref_l = sample_l[n // 2].to(device)
                 seg_ref, add_ref = seg_model(ref_l)  # seg_ref: b,1,h,w
                 loss_add = F.mse_loss(ref, add_ref)
@@ -193,10 +207,10 @@ if __name__ == "__main__":
             elif ADD_TASK == "reconstruct":
                 seg_ref, add_ref = seg_model(ref)  # seg_ref: b,1,h,w
                 loss_add = F.mse_loss(ref, add_ref)
-            
+
             else:
                 seg_ref, add_ref = seg_model(ref)  # seg_ref: b,1,h,w
-                next_frame = sample[n//2+1].to(device)
+                next_frame = sample[n // 2 + 1].to(device)
                 loss_add = F.mse_loss(next_frame, add_ref)
 
             loss_seg = seg_loss_fn(segmm, seg_ref)
@@ -236,7 +250,7 @@ if __name__ == "__main__":
         val_loop = tqdm(
             enumerate(validation_loader), total=len(validation_loader), leave=True,
         )
-        for batch_idx, (sample, sample_l) in val_loop:
+        for batch_idx, sample in val_loop:
             with torch.no_grad():
                 #### get alignment fake label
                 align_model.eval()
@@ -259,10 +273,10 @@ if __name__ == "__main__":
 
                 n = len(sample)
                 ref = sample[n // 2 + 1].to(device)
-                ref_l = sample_l[n // 2 + 1].to(device)
 
                 if ADD_TASK == "colorizing":
-                    ref_l = sample_l[n // 2].to(device)
+                    sample_l = rgb_to_l(sample)
+                    ref_l = sample_l[n // 2 + 1].to(device)
                     seg_ref, add_ref = seg_model(ref_l)  # seg_ref: b,1,h,w
                     loss_add = F.mse_loss(ref, add_ref)
 
@@ -274,15 +288,15 @@ if __name__ == "__main__":
                 elif ADD_TASK == "reconstruct":
                     seg_ref, add_ref = seg_model(ref)  # seg_ref: b,1,h,w
                     loss_add = F.mse_loss(ref, add_ref)
-                
+
                 else:
                     seg_ref, add_ref = seg_model(ref)  # seg_ref: b,1,h,w
-                    next_frame = sample[n//2+1].to(device)
+                    next_frame = sample[n // 2 + 1].to(device)
                     loss_add = F.mse_loss(next_frame, add_ref)
 
                 loss_seg = seg_loss_fn(segmm, seg_ref)
                 loss = loss_seg + WEIGHT_ADD * loss_add
-                
+
                 epoch_loss_add += loss_add.item() * n
                 epoch_loss_seg += loss_seg.item() * n
                 cnt_sample += n

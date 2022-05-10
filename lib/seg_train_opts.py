@@ -52,7 +52,11 @@ class seg_train_opts(object):
             default="/mounted/mnt-gluster/cdl-data/xliu/mot/sports_video_tracking/FieldAlignSegmentation/data/nfl_frames/",
             help="path to video frames",
         )
-
+        self.parser.add_argument(
+            "--align_model_path",
+            default="./best_soccer_model",
+            help="path to video frames",
+        )
         self.parser.add_argument(
             "--train_num_frames",
             default=7,
@@ -82,6 +86,12 @@ class seg_train_opts(object):
         )
         self.parser.add_argument("--debug_mode", action="store_true")
         self.parser.add_argument("--smooth_label", action="store_true")
+        self.parser.add_argument("--soccernet", action="store_true")
+        self.parser.add_argument(
+            "--vid_patterns",
+            default="*Sideline",
+            help="video patterns",
+        )
 
     def parse(self, args=""):
         if args == "":

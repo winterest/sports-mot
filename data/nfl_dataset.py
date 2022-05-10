@@ -127,13 +127,14 @@ class NflImageStacks(Dataset):
         ]
         processed_frames = [preprocess(frm) for frm in resized_frames]
 
+        """
         resized_frames_l = [
             Image.open(video + "/" + nm).convert("L").resize(self.size)
             for nm in cur_frame_name
         ]
         processed_frames_l = [preprocess_l(frm) for frm in resized_frames_l]
-
-        return processed_frames, processed_frames_l
+        """
+        return processed_frames
 
 
 class NflImagePairs(Dataset):
